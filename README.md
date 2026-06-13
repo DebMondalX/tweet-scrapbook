@@ -61,6 +61,13 @@ How it stays safe and durable:
 - Local and remote archives are **merged by tweet id** on connect, so you never lose entries.
 - The gist is **private** and only stores the same lightweight pointers (`tweetId`, `category`, `addedAt`) — no tweet content.
 
+## 💾 Export / Import
+
+The sync bar has **⬇ Export** and **⬆ Import** buttons for a portable, offline backup:
+
+- **Export** downloads your whole archive as `tweet-scrapbook-YYYY-MM-DD.json`.
+- **Import** reads such a file and **merges** it into your archive (union by tweet id — never deletes existing entries or creates duplicates). If you're connected to a gist, the merged result is pushed there too.
+
 ## 📄 License
 
 MIT

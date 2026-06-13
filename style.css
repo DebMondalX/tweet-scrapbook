@@ -102,16 +102,29 @@ main {
   background: #d62929;
 }
 
+.sync-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
 .link-btn {
   border: none;
   background: transparent;
   color: var(--accent);
   font-size: 0.9rem;
   cursor: pointer;
-  padding: 0.2rem 0.3rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
 }
 .link-btn:hover {
   text-decoration: underline;
+}
+.link-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  text-decoration: none;
 }
 
 .sync-panel .sync-help {

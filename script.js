@@ -51,6 +51,9 @@ const tokenInput = document.getElementById("gh-token");
 const connectBtn = document.getElementById("gh-connect");
 const disconnectBtn = document.getElementById("gh-disconnect");
 const syncError = document.getElementById("sync-error");
+const exportBtn = document.getElementById("export-btn");
+const importBtn = document.getElementById("import-btn");
+const importFile = document.getElementById("import-file");
 
 // --- Persistence ---------------------------------------------------------
 
@@ -451,6 +454,59 @@ tokenInput.addEventListener("keydown", (e) => {
 });
 
 disconnectBtn.addEventListener("click", disconnect);
+
+// --- Export / Import backup ----------------------------------------------
+
+// Download the whole archive as a JSON file.
+function exportArchive() {
+  const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const blob = new Blob([JSON.stringify(items, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `tweet-scrapbook-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Read a previously exported JSON file and merge it in (union by tweetId, so
+// importing never deletes existing tweets or creates duplicates).
+function importArchive(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let incoming;
+    try {
+      incoming = JSON.parse(reader.result);
+    } catch {
+      alert("That file isn't valid JSON.");
+      return;
+    }
+    if (!Array.isArray(incoming)) {
+      alert("That file doesn't look like a Tweet Scrapbook export.");
+      return;
+    }
+    // Keep only well-formed entries.
+    const clean = incoming.filter((it) => it && it.tweetId);
+    const before = items.length;
+    items = mergeArchives(items, clean);
+    saveItems();
+    renderFeed();
+    pushToGist();
+    alert(`Imported. Added ${items.length - before} new tweet(s).`);
+  };
+  reader.readAsText(file);
+}
+
+exportBtn.addEventListener("click", exportArchive);
+importBtn.addEventListener("click", () => importFile.click());
+importFile.addEventListener("change", () => {
+  if (importFile.files[0]) importArchive(importFile.files[0]);
+  importFile.value = ""; // allow re-importing the same file
+});
 
 // --- Wire up -------------------------------------------------------------
 

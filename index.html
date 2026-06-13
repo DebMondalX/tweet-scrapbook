@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tweet Scrapbook</title>
   <link rel="preconnect" href="https://platform.twitter.com" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <header class="site-header">
@@ -20,7 +20,12 @@
         <span id="sync-dot" class="sync-dot"></span>
         <span id="sync-text">Not connected — saved only in this browser</span>
       </div>
-      <button type="button" id="sync-toggle" class="link-btn">Connect GitHub</button>
+      <div class="sync-actions">
+        <button type="button" id="export-btn" class="link-btn">⬇ Export</button>
+        <button type="button" id="import-btn" class="link-btn">⬆ Import</button>
+        <button type="button" id="sync-toggle" class="link-btn">Connect GitHub</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden />
+      </div>
     </section>
 
     <section class="sync-panel card" id="sync-panel" hidden>
@@ -87,6 +92,6 @@
     <p>Saved locally in your browser. No account, no server, no tracking.</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>
