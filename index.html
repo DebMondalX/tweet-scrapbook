@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tweet Scrapbook</title>
+  <link rel="preconnect" href="https://platform.twitter.com" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>📌 Tweet Scrapbook</h1>
+    <p class="tagline">Your curated wall of important tweets — paste, tag, and find them later.</p>
+  </header>
+
+  <main>
+    <!-- Link Importer -->
+    <section class="importer card">
+      <form id="add-form" autocomplete="off">
+        <label for="tweet-url" class="visually-hidden">Tweet URL</label>
+        <input
+          type="url"
+          id="tweet-url"
+          placeholder="Paste a tweet URL, e.g. https://x.com/user/status/123456789"
+          required
+        />
+
+        <label for="category" class="visually-hidden">Category</label>
+        <select id="category">
+          <!-- Options injected from script.js -->
+        </select>
+
+        <button type="submit">Add to Archive</button>
+      </form>
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+    </section>
+
+    <!-- Filter bar -->
+    <nav class="filters" id="filters" aria-label="Filter by category">
+      <!-- Filter buttons injected from script.js -->
+    </nav>
+
+    <!-- Archive feed -->
+    <section id="feed" class="feed" aria-live="polite">
+      <!-- Saved tweets injected from script.js -->
+    </section>
+
+    <p id="empty-state" class="empty-state" hidden>
+      Nothing here yet. Paste a tweet URL above to start your scrapbook. ✨
+    </p>
+  </main>
+
+  <footer class="site-footer">
+    <p>Saved locally in your browser. No account, no server, no tracking.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
