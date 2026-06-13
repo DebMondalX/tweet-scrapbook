@@ -17,6 +17,8 @@ const CATEGORIES = [
   { id: "insights", label: "💡 Insights/Learnings" },
   { id: "wall-of-fame", label: "❤️ Wall of Fame (50+ Likes)" },
   { id: "tools", label: "🛠️ Useful Tools" },
+  { id: "travels", label: "✈️ Travels" },
+  { id: "random", label: "🎲 Random" },
 ];
 
 const STORAGE_KEY = "tweet-scrapbook.items";
