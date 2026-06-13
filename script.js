@@ -123,7 +123,7 @@ function renderFeed() {
   emptyState.hidden = items.length !== 0;
   if (visible.length === 0 && items.length !== 0) {
     const note = document.createElement("p");
-    note.className = "empty-state";
+    note.className = "empty-state span-all";
     note.textContent = "No tweets in this category yet.";
     feedEl.appendChild(note);
     return;
@@ -161,6 +161,8 @@ function buildTweetCard(item) {
   // upgrades it into a fully rendered embed.
   const blockquote = document.createElement("blockquote");
   blockquote.className = "twitter-tweet";
+  blockquote.setAttribute("data-width", "300"); // smaller embed for the grid
+  blockquote.setAttribute("data-conversation", "none");
   const a = document.createElement("a");
   a.href = item.url;
   a.textContent = "View tweet on X";
