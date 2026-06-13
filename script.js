@@ -1,7 +1,13 @@
 /* =========================================================================
-   Tweet Scrapbook — single-user, browser-only tweet archive.
-   Tweets are stored in localStorage and rendered with Twitter's official
-   widgets.js embed script so they look exactly like they do on X.
+   Tweet Scrapbook — single-user tweet archive.
+
+   Storage model:
+     • localStorage is a fast local cache for instant rendering.
+     • The durable source of truth is an OPTIONAL private GitHub Gist. When a
+       gist-scoped token is connected, the archive is synced to a private gist
+       named `tweet-scrapbook.json`, so it survives clearing browser data and
+       follows the user across devices/browsers.
+   Tweets are rendered with Twitter's official widgets.js embed script.
    ========================================================================= */
 
 // --- Configuration -------------------------------------------------------
@@ -14,11 +20,17 @@ const CATEGORIES = [
 ];
 
 const STORAGE_KEY = "tweet-scrapbook.items";
+const TOKEN_KEY = "tweet-scrapbook.gh-token";
+const GIST_ID_KEY = "tweet-scrapbook.gist-id";
+const GIST_FILENAME = "tweet-scrapbook.json";
 
 // --- State ---------------------------------------------------------------
 
 let items = loadItems(); // [{ id, tweetId, url, category, addedAt }]
 let activeFilter = "all";
+
+let ghToken = localStorage.getItem(TOKEN_KEY) || null;
+let gistId = localStorage.getItem(GIST_ID_KEY) || null;
 
 // --- DOM references ------------------------------------------------------
 
@@ -29,6 +41,16 @@ const formError = document.getElementById("form-error");
 const filtersEl = document.getElementById("filters");
 const feedEl = document.getElementById("feed");
 const emptyState = document.getElementById("empty-state");
+
+// Sync UI
+const syncDot = document.getElementById("sync-dot");
+const syncText = document.getElementById("sync-text");
+const syncToggle = document.getElementById("sync-toggle");
+const syncPanel = document.getElementById("sync-panel");
+const tokenInput = document.getElementById("gh-token");
+const connectBtn = document.getElementById("gh-connect");
+const disconnectBtn = document.getElementById("gh-disconnect");
+const syncError = document.getElementById("sync-error");
 
 // --- Persistence ---------------------------------------------------------
 
@@ -42,6 +64,157 @@ function loadItems() {
 
 function saveItems() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+// --- GitHub Gist sync ----------------------------------------------------
+
+const GH_API = "https://api.github.com";
+
+function ghHeaders() {
+  return {
+    Authorization: `Bearer ${ghToken}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
+
+const isConnected = () => Boolean(ghToken && gistId);
+
+// Reflect sync state in the little status bar.
+function setSyncStatus(state, message) {
+  const map = {
+    disconnected: ["", "Not connected — saved only in this browser"],
+    connected: ["connected", "Synced to a private Gist"],
+    syncing: ["syncing", "Syncing…"],
+    error: ["error", message || "Sync error"],
+  };
+  const [cls, text] = map[state] || map.disconnected;
+  syncDot.className = "sync-dot" + (cls ? " " + cls : "");
+  syncText.textContent = text;
+}
+
+// Find an existing `tweet-scrapbook.json` gist for this account, else create
+// one. Returns the gist id. Searching by filename means a browser-data clear
+// (which loses the cached gist id) reconnects to the SAME gist, not a dupe.
+async function findOrCreateGist() {
+  const res = await fetch(`${GH_API}/gists?per_page=100`, { headers: ghHeaders() });
+  if (res.status === 401) throw new Error("Invalid or expired token.");
+  if (!res.ok) throw new Error(`GitHub error (${res.status}).`);
+
+  const gists = await res.json();
+  const existing = gists.find((g) => g.files && g.files[GIST_FILENAME]);
+  if (existing) return existing.id;
+
+  const createRes = await fetch(`${GH_API}/gists`, {
+    method: "POST",
+    headers: ghHeaders(),
+    body: JSON.stringify({
+      description: "Tweet Scrapbook archive",
+      public: false,
+      files: { [GIST_FILENAME]: { content: "[]" } },
+    }),
+  });
+  if (!createRes.ok) throw new Error(`Could not create gist (${createRes.status}).`);
+  const created = await createRes.json();
+  return created.id;
+}
+
+async function pullFromGist() {
+  const res = await fetch(`${GH_API}/gists/${gistId}`, { headers: ghHeaders() });
+  if (!res.ok) throw new Error(`Could not read gist (${res.status}).`);
+  const gist = await res.json();
+  const file = gist.files && gist.files[GIST_FILENAME];
+  if (!file) return [];
+  try {
+    return JSON.parse(file.content) || [];
+  } catch {
+    return [];
+  }
+}
+
+async function pushToGist() {
+  if (!isConnected()) return;
+  setSyncStatus("syncing");
+  try {
+    const res = await fetch(`${GH_API}/gists/${gistId}`, {
+      method: "PATCH",
+      headers: ghHeaders(),
+      body: JSON.stringify({
+        files: { [GIST_FILENAME]: { content: JSON.stringify(items, null, 2) } },
+      }),
+    });
+    if (!res.ok) throw new Error(`Sync failed (${res.status}).`);
+    setSyncStatus("connected");
+  } catch (err) {
+    setSyncStatus("error", "Saved locally, but sync failed.");
+  }
+}
+
+// Merge two archives by tweetId (union), so connecting never loses tweets
+// that exist only locally or only in the gist.
+function mergeArchives(a, b) {
+  const seen = new Set();
+  const out = [];
+  for (const item of [...a, ...b]) {
+    if (item && item.tweetId && !seen.has(item.tweetId)) {
+      seen.add(item.tweetId);
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+async function connect(token) {
+  ghToken = token;
+  setSyncStatus("syncing");
+  try {
+    gistId = await findOrCreateGist();
+    const remote = await pullFromGist();
+    items = mergeArchives(items, remote); // keep local + remote
+    saveItems();
+    await pushToGist(); // write the merged result back
+    localStorage.setItem(TOKEN_KEY, ghToken);
+    localStorage.setItem(GIST_ID_KEY, gistId);
+    setSyncStatus("connected");
+    renderConnectionUI();
+    renderFeed();
+  } catch (err) {
+    ghToken = null;
+    gistId = null;
+    setSyncStatus("disconnected");
+    showSyncError(err.message || "Could not connect.");
+  }
+}
+
+// Disconnect keeps the local cache; only the token + cached gist id are dropped.
+function disconnect() {
+  ghToken = null;
+  gistId = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(GIST_ID_KEY);
+  setSyncStatus("disconnected");
+  renderConnectionUI();
+}
+
+// On load, if we already have a token, re-sync from the gist.
+async function initSync() {
+  if (!ghToken) {
+    setSyncStatus("disconnected");
+    return;
+  }
+  setSyncStatus("syncing");
+  try {
+    if (!gistId) gistId = await findOrCreateGist();
+    const remote = await pullFromGist();
+    items = mergeArchives(remote, items); // remote first: prefer stored copy
+    saveItems();
+    localStorage.setItem(GIST_ID_KEY, gistId);
+    setSyncStatus("connected");
+    renderFeed();
+  } catch (err) {
+    setSyncStatus("error", "Couldn't reach GitHub. Showing local copy.");
+  }
+  renderConnectionUI();
 }
 
 // --- URL parsing ---------------------------------------------------------
@@ -215,12 +388,14 @@ function addItem(rawUrl, category) {
   clearError();
   urlInput.value = "";
   renderFeed();
+  pushToGist();
 }
 
 function removeItem(id) {
   items = items.filter((it) => it.id !== id);
   saveItems();
   renderFeed();
+  pushToGist();
 }
 
 function showError(msg) {
@@ -233,6 +408,50 @@ function clearError() {
   formError.textContent = "";
 }
 
+// --- Sync UI -------------------------------------------------------------
+
+function showSyncError(msg) {
+  syncError.textContent = msg;
+  syncError.hidden = false;
+}
+
+function clearSyncError() {
+  syncError.hidden = true;
+  syncError.textContent = "";
+}
+
+// Reflect connected/disconnected state in the panel controls.
+function renderConnectionUI() {
+  if (isConnected()) {
+    syncToggle.textContent = "Manage sync";
+    disconnectBtn.hidden = false;
+    tokenInput.value = "";
+  } else {
+    syncToggle.textContent = "Connect GitHub";
+    disconnectBtn.hidden = true;
+  }
+}
+
+syncToggle.addEventListener("click", () => {
+  syncPanel.hidden = !syncPanel.hidden;
+});
+
+connectBtn.addEventListener("click", () => {
+  clearSyncError();
+  const token = tokenInput.value.trim();
+  if (!token) {
+    showSyncError("Paste your gist-scoped token first.");
+    return;
+  }
+  connect(token);
+});
+
+tokenInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") connectBtn.click();
+});
+
+disconnectBtn.addEventListener("click", disconnect);
+
 // --- Wire up -------------------------------------------------------------
 
 form.addEventListener("submit", (e) => {
@@ -242,4 +461,6 @@ form.addEventListener("submit", (e) => {
 
 renderCategoryOptions();
 renderFilters();
+renderConnectionUI();
 renderFeed();
+initSync();

@@ -61,6 +61,97 @@ main {
   padding: 1.25rem;
 }
 
+/* Sync bar + panel */
+.sync-bar,
+.sync-panel {
+  max-width: 620px;
+  margin: 0 auto 1rem;
+}
+
+.sync-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.sync-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #b0b8c0; /* disconnected (gray) */
+  flex: 0 0 auto;
+}
+
+.sync-dot.connected {
+  background: #17bf63;
+}
+.sync-dot.syncing {
+  background: #f5b915;
+}
+.sync-dot.error {
+  background: #d62929;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.sync-panel .sync-help {
+  margin-top: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.sync-panel code {
+  background: #eef3f7;
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
+.sync-panel-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+#gh-token {
+  flex: 1 1 auto;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+#gh-connect {
+  flex: 0 0 auto;
+  padding: 0.6rem 1.1rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
 /* Importer form */
 .importer {
   margin-bottom: 1.5rem;

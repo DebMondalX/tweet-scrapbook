@@ -14,6 +14,39 @@
   </header>
 
   <main>
+    <!-- GitHub Gist sync -->
+    <section class="sync-bar card" id="sync-bar">
+      <div class="sync-status">
+        <span id="sync-dot" class="sync-dot"></span>
+        <span id="sync-text">Not connected — saved only in this browser</span>
+      </div>
+      <button type="button" id="sync-toggle" class="link-btn">Connect GitHub</button>
+    </section>
+
+    <section class="sync-panel card" id="sync-panel" hidden>
+      <p class="sync-help">
+        Paste a GitHub token with <strong>only</strong> the <code>gist</code> scope.
+        It's stored only in this browser and used to sync your archive to a private Gist.
+      </p>
+      <p>
+        <a
+          href="https://github.com/settings/tokens/new?scopes=gist&description=Tweet+Scrapbook"
+          target="_blank"
+          rel="noopener"
+          >Create a token →</a
+        >
+      </p>
+      <div class="sync-panel-row">
+        <label for="gh-token" class="visually-hidden">GitHub token</label>
+        <input type="password" id="gh-token" placeholder="ghp_…" autocomplete="off" />
+        <button type="button" id="gh-connect">Connect</button>
+      </div>
+      <p id="sync-error" class="form-error" role="alert" hidden></p>
+      <button type="button" id="gh-disconnect" class="link-btn" hidden>
+        Disconnect (keeps your local copy)
+      </button>
+    </section>
+
     <!-- Link Importer -->
     <section class="importer card">
       <form id="add-form" autocomplete="off">

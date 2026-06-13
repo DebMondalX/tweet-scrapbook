@@ -12,7 +12,7 @@ A simple, single-user web app that acts as a **curated digital scrapbook for imp
   - ❤️ Wall of Fame (50+ Likes)
   - 🛠️ Useful Tools
 - **Filter** — one-click category buttons at the top filter the feed.
-- **Local & Private** — everything is saved in your browser's `localStorage`. No account, no server, no tracking.
+- **Durable storage** — works offline using `localStorage`, and can optionally sync to a **private GitHub Gist** so your archive survives clearing browser data and follows you across devices.
 
 ## 🚀 Usage
 
@@ -44,6 +44,22 @@ tweet-scrapbook/
 - The feed renders a `<blockquote class="twitter-tweet">` per item, then loads `platform.twitter.com/widgets.js` to upgrade them into full embeds.
 
 > **Note:** Embeds require an internet connection to fetch from Twitter/X. If a tweet is deleted or set to private, the embed will fall back to a plain link.
+
+## ☁️ Optional sync to a private Gist
+
+`localStorage` alone is per-browser and gets wiped if you clear site data. To make your archive durable, connect a GitHub Gist:
+
+1. Create a **classic Personal Access Token** with **only** the `gist` scope:
+   <https://github.com/settings/tokens/new?scopes=gist&description=Tweet+Scrapbook>
+2. Click **Connect GitHub** in the app and paste the token.
+3. The app finds (or creates) a private gist named `tweet-scrapbook.json` and keeps it in sync on every add/delete.
+
+How it stays safe and durable:
+
+- The token is stored **only in your browser's `localStorage`** — never committed to this repo or sent anywhere except GitHub's API. Revoke it anytime from GitHub settings.
+- Because the gist is located **by filename**, clearing browser data and re-pasting the token reconnects to the *same* gist (no duplicates) and restores your archive.
+- Local and remote archives are **merged by tweet id** on connect, so you never lose entries.
+- The gist is **private** and only stores the same lightweight pointers (`tweetId`, `category`, `addedAt`) — no tweet content.
 
 ## 📄 License
 
