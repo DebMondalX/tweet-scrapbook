@@ -276,10 +276,23 @@ main {
   background: #fafbfc;
 }
 
-.tweet-card-bar .tag {
+.tweet-card-bar .tag-select {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0.2rem 0.3rem;
+  cursor: pointer;
+  max-width: 220px;
+}
+
+.tweet-card-bar .tag-select:hover,
+.tweet-card-bar .tag-select:focus {
+  border-color: var(--border);
+  background: #fff;
+  outline: none;
 }
 
 .delete-btn {

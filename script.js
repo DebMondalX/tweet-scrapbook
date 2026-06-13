@@ -318,9 +318,18 @@ function buildTweetCard(item) {
   const bar = document.createElement("div");
   bar.className = "tweet-card-bar";
 
-  const tag = document.createElement("span");
-  tag.className = "tag";
-  tag.textContent = categoryLabel(item.category);
+  // Category selector — lets you move the tweet to another section inline.
+  const tag = document.createElement("select");
+  tag.className = "tag-select";
+  tag.title = "Move to another category";
+  CATEGORIES.forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat.id;
+    opt.textContent = cat.label;
+    if (cat.id === item.category) opt.selected = true;
+    tag.appendChild(opt);
+  });
+  tag.addEventListener("change", () => changeCategory(item.id, tag.value));
 
   const del = document.createElement("button");
   del.className = "delete-btn";
@@ -398,6 +407,16 @@ function addItem(rawUrl, category) {
 
 function removeItem(id) {
   items = items.filter((it) => it.id !== id);
+  saveItems();
+  renderFeed();
+  pushToGist();
+}
+
+// Move a tweet to a different category.
+function changeCategory(id, newCategory) {
+  const item = items.find((it) => it.id === id);
+  if (!item || item.category === newCategory) return;
+  item.category = newCategory;
   saveItems();
   renderFeed();
   pushToGist();
