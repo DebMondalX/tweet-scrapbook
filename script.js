@@ -406,6 +406,9 @@ function addItem(rawUrl, category) {
 }
 
 function removeItem(id) {
+  if (!confirm("Remove this tweet from your archive? This can't be undone.")) {
+    return;
+  }
   items = items.filter((it) => it.id !== id);
   saveItems();
   renderFeed();
