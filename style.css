@@ -92,6 +92,12 @@ main {
   flex: 0 0 auto;
 }
 
+.sync-time {
+  font-size: 0.8rem;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
 .sync-dot.connected {
   background: #17bf63;
 }

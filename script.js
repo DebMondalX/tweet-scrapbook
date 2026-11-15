@@ -24,6 +24,7 @@ const CATEGORIES = [
 const STORAGE_KEY = "tweet-scrapbook.items";
 const TOKEN_KEY = "tweet-scrapbook.gh-token";
 const GIST_ID_KEY = "tweet-scrapbook.gist-id";
+const LAST_SYNCED_KEY = "tweet-scrapbook.last-synced";
 const GIST_FILENAME = "tweet-scrapbook.json";
 
 // --- State ---------------------------------------------------------------
@@ -53,6 +54,7 @@ const tokenInput = document.getElementById("gh-token");
 const connectBtn = document.getElementById("gh-connect");
 const disconnectBtn = document.getElementById("gh-disconnect");
 const syncError = document.getElementById("sync-error");
+const syncTime = document.getElementById("sync-time");
 const exportBtn = document.getElementById("export-btn");
 const importBtn = document.getElementById("import-btn");
 const importFile = document.getElementById("import-file");
@@ -96,6 +98,37 @@ function setSyncStatus(state, message) {
   const [cls, text] = map[state] || map.disconnected;
   syncDot.className = "sync-dot" + (cls ? " " + cls : "");
   syncText.textContent = text;
+  renderLastSynced();
+}
+
+// Record a successful sync and refresh the "last synced" label.
+function markSynced() {
+  localStorage.setItem(LAST_SYNCED_KEY, String(Date.now()));
+  renderLastSynced();
+}
+
+// Turn a timestamp into a short relative label, e.g. "just now", "5 min ago".
+function relativeTime(ts) {
+  const secs = Math.round((Date.now() - ts) / 1000);
+  if (secs < 10) return "just now";
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+// Only show the timestamp while connected, so it never contradicts the status.
+function renderLastSynced() {
+  const raw = localStorage.getItem(LAST_SYNCED_KEY);
+  if (!raw || !isConnected()) {
+    syncTime.textContent = "";
+    return;
+  }
+  syncTime.textContent = `· synced ${relativeTime(Number(raw))}`;
 }
 
 // Build an error for a failed GitHub response. A 401/403 means the token is
@@ -162,6 +195,7 @@ async function pushToGist() {
       }),
     });
     if (!res.ok) throw ghError(res, "Sync failed");
+    markSynced();
     setSyncStatus("connected");
   } catch (err) {
     setSyncStatus(
@@ -215,6 +249,7 @@ function disconnect() {
   gistId = null;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(GIST_ID_KEY);
+  localStorage.removeItem(LAST_SYNCED_KEY);
   setSyncStatus("disconnected");
   renderConnectionUI();
 }
@@ -232,6 +267,7 @@ async function initSync() {
     items = mergeArchives(remote, items); // remote first: prefer stored copy
     saveItems();
     localStorage.setItem(GIST_ID_KEY, gistId);
+    markSynced();
     setSyncStatus("connected");
     renderFeed();
   } catch (err) {
@@ -569,3 +605,6 @@ renderFilters();
 renderConnectionUI();
 renderFeed();
 initSync();
+
+// Keep the "synced N min ago" label current without a page action.
+setInterval(renderLastSynced, 30000);
