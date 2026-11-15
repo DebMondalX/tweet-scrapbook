@@ -98,13 +98,26 @@ function setSyncStatus(state, message) {
   syncText.textContent = text;
 }
 
+// Build an error for a failed GitHub response. A 401/403 means the token is
+// expired, revoked, or missing the `gist` scope — flag it so the UI can tell
+// the user to reconnect rather than blaming the network.
+function ghError(res, context) {
+  const auth = res.status === 401 || res.status === 403;
+  const err = new Error(
+    auth
+      ? "GitHub token expired or revoked."
+      : `${context} (${res.status}).`
+  );
+  err.authError = auth;
+  return err;
+}
+
 // Find an existing `tweet-scrapbook.json` gist for this account, else create
 // one. Returns the gist id. Searching by filename means a browser-data clear
 // (which loses the cached gist id) reconnects to the SAME gist, not a dupe.
 async function findOrCreateGist() {
   const res = await fetch(`${GH_API}/gists?per_page=100`, { headers: ghHeaders() });
-  if (res.status === 401) throw new Error("Invalid or expired token.");
-  if (!res.ok) throw new Error(`GitHub error (${res.status}).`);
+  if (!res.ok) throw ghError(res, "GitHub error");
 
   const gists = await res.json();
   const existing = gists.find((g) => g.files && g.files[GIST_FILENAME]);
@@ -119,14 +132,14 @@ async function findOrCreateGist() {
       files: { [GIST_FILENAME]: { content: "[]" } },
     }),
   });
-  if (!createRes.ok) throw new Error(`Could not create gist (${createRes.status}).`);
+  if (!createRes.ok) throw ghError(createRes, "Could not create gist");
   const created = await createRes.json();
   return created.id;
 }
 
 async function pullFromGist() {
   const res = await fetch(`${GH_API}/gists/${gistId}`, { headers: ghHeaders() });
-  if (!res.ok) throw new Error(`Could not read gist (${res.status}).`);
+  if (!res.ok) throw ghError(res, "Could not read gist");
   const gist = await res.json();
   const file = gist.files && gist.files[GIST_FILENAME];
   if (!file) return [];
@@ -148,10 +161,15 @@ async function pushToGist() {
         files: { [GIST_FILENAME]: { content: JSON.stringify(items, null, 2) } },
       }),
     });
-    if (!res.ok) throw new Error(`Sync failed (${res.status}).`);
+    if (!res.ok) throw ghError(res, "Sync failed");
     setSyncStatus("connected");
   } catch (err) {
-    setSyncStatus("error", "Saved locally, but sync failed.");
+    setSyncStatus(
+      "error",
+      err.authError
+        ? "Saved locally. GitHub token expired — reconnect to sync."
+        : "Saved locally, but sync failed."
+    );
   }
 }
 
@@ -217,7 +235,14 @@ async function initSync() {
     setSyncStatus("connected");
     renderFeed();
   } catch (err) {
-    setSyncStatus("error", "Couldn't reach GitHub. Showing local copy.");
+    if (err.authError) {
+      setSyncStatus(
+        "error",
+        "GitHub token expired — click Connect GitHub and paste a new one."
+      );
+    } else {
+      setSyncStatus("error", "Couldn't reach GitHub. Showing local copy.");
+    }
   }
   renderConnectionUI();
 }
